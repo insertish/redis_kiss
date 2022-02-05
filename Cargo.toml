@@ -2,6 +2,8 @@
 name = "redis-kiss"
 version = "0.1.0"
 edition = "2021"
+description = "A really stupid approach to managing Redis PubSub."
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
