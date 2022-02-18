@@ -115,7 +115,7 @@ pub async fn open_pubsub_connection() -> Result<PubSub, Error> {
         .map_err(|_| Error::FailedConnection)
 }
 
-pub async fn decode_payload_using<T: DeserializeOwned>(
+pub fn decode_payload_using<T: DeserializeOwned>(
     msg: &Msg,
     target: &PayloadType,
 ) -> Result<T, Error> {
@@ -134,28 +134,28 @@ pub async fn decode_payload_using<T: DeserializeOwned>(
     })
 }
 
-pub async fn decode_payload<T: DeserializeOwned>(msg: &Msg) -> Result<T, Error> {
+pub fn decode_payload<T: DeserializeOwned>(msg: &Msg) -> Result<T, Error> {
     let pt = &*REDIS_PAYLOAD_TYPE;
-    match decode_payload_using::<T>(msg, pt).await {
+    match decode_payload_using::<T>(msg, pt) {
         Err(error) => {
             if !(*REDIS_KISS_LENIENT) {
                 return Err(error);
             }
 
             if pt != &PayloadType::Json {
-                if let Ok(v) = decode_payload_using(msg, &PayloadType::Json).await {
+                if let Ok(v) = decode_payload_using(msg, &PayloadType::Json) {
                     return Ok(v);
                 }
             }
 
             if pt != &PayloadType::Msgpack {
-                if let Ok(v) = decode_payload_using(msg, &PayloadType::Msgpack).await {
+                if let Ok(v) = decode_payload_using(msg, &PayloadType::Msgpack) {
                     return Ok(v);
                 }
             }
 
             if pt != &PayloadType::Bincode {
-                if let Ok(v) = decode_payload_using(msg, &PayloadType::Bincode).await {
+                if let Ok(v) = decode_payload_using(msg, &PayloadType::Bincode) {
                     return Ok(v);
                 }
             }
@@ -168,6 +168,8 @@ pub async fn decode_payload<T: DeserializeOwned>(msg: &Msg) -> Result<T, Error> 
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use futures::{select, FutureExt, StreamExt};
 
     #[async_std::test]
@@ -192,11 +194,21 @@ mod tests {
         if let Ok(mut conn) = crate::open_pubsub_connection().await {
             conn.subscribe("test").await.unwrap();
             conn.subscribe("neat").await.unwrap();
+            conn.subscribe("while").await.unwrap();
             crate::p("neat", "epic").await;
 
             async fn handle_messages(conn: &mut redis::aio::PubSub) {
                 loop {
-                    {
+                    if let Some(item) = conn.on_message().next().await {
+                        let topic: String = item.get_channel_name().to_string();
+                        if let Ok(v) = crate::decode_payload::<String>(&item) {
+                            dbg!(&topic, v);
+                        } else {
+                            eprintln!("deser failed!")
+                        }
+                    }
+
+                    /*{
                         let mut stream = conn.on_message();
                         while let Some(item) = stream.next().await {
                             let topic: String = item.get_channel_name().to_string();
@@ -210,7 +222,7 @@ mod tests {
                                 eprintln!("deser failed!")
                             }
                         }
-                    }
+                    }*/
 
                     conn.subscribe("deez").await.unwrap();
                 }
@@ -218,7 +230,9 @@ mod tests {
 
             async fn worker_task() {
                 crate::p("test", "sus").await;
+                async_std::task::sleep(Duration::from_secs(1)).await;
                 crate::p("deez", "nuts").await;
+                async_std::task::sleep(Duration::from_secs(1)).await;
             }
 
             select! {
