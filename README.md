@@ -1,5 +1,7 @@
 # redis_kiss
 
+Note: this now also exposes access to the Redis connection pool.
+
 This is a pretty simple library intended for just consuming and producing messages for Redis PubSub, it does not follow "good programming practice" in the slightest but it does work and does simplify the work required.
 
 The library manages a global pool of Redis connections and creates listener connections on the fly (due to some technical limitations).

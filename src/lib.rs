@@ -58,6 +58,10 @@ lazy_static! {
         env::var("REDIS_KISS_LENIENT").map_or(true, |v| v == "1");
 }
 
+pub async fn get_connection() -> Result<mobc::Connection<RedisConnectionManager>, Error> {
+    REDIS_POOL.get().await.map_err(|_| Error::FailedConnection)
+}
+
 pub async fn p<
     K: ToRedisArgs + std::marker::Send + std::marker::Sync,
     T: Serialize + std::fmt::Debug,
