@@ -1,16 +1,16 @@
 use std::env;
 
 use mobc::Pool;
-use mobc_redis::{
-    redis::{AsyncCommands, ToRedisArgs},
-    RedisConnectionManager,
-};
+use mobc_redis::{redis::ToRedisArgs, RedisConnectionManager};
 use redis::{
     aio::{Connection, PubSub},
     Msg,
 };
 
 use serde::{de::DeserializeOwned, Serialize};
+
+pub use mobc_redis::redis::AsyncCommands;
+pub type Conn = mobc::Connection<RedisConnectionManager>;
 
 #[macro_use]
 extern crate lazy_static;
@@ -58,7 +58,7 @@ lazy_static! {
         env::var("REDIS_KISS_LENIENT").map_or(true, |v| v == "1");
 }
 
-pub async fn get_connection() -> Result<mobc::Connection<RedisConnectionManager>, Error> {
+pub async fn get_connection() -> Result<Conn, Error> {
     REDIS_POOL.get().await.map_err(|_| Error::FailedConnection)
 }
 
