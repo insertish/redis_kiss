@@ -10,6 +10,8 @@ use redis::{
 use serde::{de::DeserializeOwned, Serialize};
 
 pub use mobc_redis::redis::AsyncCommands;
+pub use redis;
+
 pub type Conn = mobc::Connection<RedisConnectionManager>;
 
 #[macro_use]
